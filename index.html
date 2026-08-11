@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>数字华容道</title>
+  <style>
+    :root {
+      --bg: #1a2332;
+      --panel: #243447;
+      --tile: #3d7ea6;
+      --tile-hover: #4a9bc7;
+      --empty: #15202b;
+      --text: #e8f1f8;
+      --accent: #f0a500;
+      --btn: #2e5a7e;
+      --btn-hover: #3a7aab;
+      --muted: #8aa0b4;
+      --cell: 78px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(61, 126, 166, 0.22), transparent 55%),
+        radial-gradient(ellipse 70% 50% at 90% 80%, rgba(240, 165, 0, 0.08), transparent 50%),
+        var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(100%, 440px);
+      text-align: center;
+    }
+
+    @media (max-width: 420px) {
+      :root { --cell: min(var(--cell), 14vw); }
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 6vw, 2.2rem);
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .menu-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    button {
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn {
+      background: var(--btn);
+      color: var(--text);
+      font-size: 1.05rem;
+      padding: 14px 18px;
+    }
+
+    .btn:hover { background: var(--btn-hover); }
+
+    .btn-sm {
+      background: var(--btn);
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 6px 12px;
+    }
+
+    .btn-sm:hover { background: var(--btn-hover); }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .info {
+      font-size: 1rem;
+      text-align: left;
+    }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .board-wrap {
+      display: inline-block;
+      background: var(--panel);
+      padding: 8px;
+      border-radius: 12px;
+      margin: 0 auto 14px;
+    }
+
+    .board {
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(var(--n), var(--cell));
+      grid-template-rows: repeat(var(--n), var(--cell));
+    }
+
+    .tile {
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 8px;
+      font-size: calc(var(--cell) * 0.38);
+      font-weight: 700;
+      color: var(--text);
+      background: var(--tile);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background 0.12s, transform 0.12s;
+    }
+
+    .tile:not(.empty):hover { background: var(--tile-hover); }
+    .tile:not(.empty):active { transform: scale(0.96); }
+
+    .tile.empty {
+      background: var(--empty);
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .tip {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 16, 24, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 20;
+    }
+
+    .overlay.show { display: flex; }
+
+    .dialog {
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 28px 24px 22px;
+      width: min(100%, 360px);
+      text-align: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .dialog h2 {
+      color: var(--accent);
+      font-size: 1.5rem;
+      margin-bottom: 12px;
+    }
+
+    .dialog p {
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 22px;
+      font-size: 0.98rem;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .dialog-actions .btn { min-width: 110px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section id="menu" class="screen active">
+      <h1>数字华容道</h1>
+      <p class="subtitle">选择难度，用方向键或 WASD 移动方块<br />手机可点击相邻方块</p>
+      <div class="menu-btns">
+        <button class="btn" data-size="3">3 × 3　入门</button>
+        <button class="btn" data-size="4">4 × 4　进阶</button>
+        <button class="btn" data-size="5">5 × 5　挑战</button>
+      </div>
+    </section>
+
+    <section id="game" class="screen">
+      <div class="topbar">
+        <div class="info" id="info"></div>
+        <div class="actions">
+          <button class="btn-sm" id="btn-menu">返回菜单</button>
+          <button class="btn-sm" id="btn-restart">重新开始</button>
+        </div>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="数字华容道棋盘"></div>
+      </div>
+      <p class="tip">方向键 / WASD 移动 · 点击与缺口相邻的方块也可移动</p>
+    </section>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="dialog">
+      <h2>通关！</h2>
+      <p id="win-text"></p>
+      <div class="dialog-actions">
+        <button class="btn" id="win-again">再来一局</button>
+        <button class="btn" id="win-menu">返回菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CELL = { 3: 90, 4: 78, 5: 66 };
+
+    const state = {
+      size: 3,
+      board: [],
+      empty: [0, 0],
+      moves: 0,
+      won: false,
+    };
+
+    const menuEl = document.getElementById("menu");
+    const gameEl = document.getElementById("game");
+    const boardEl = document.getElementById("board");
+    const infoEl = document.getElementById("info");
+    const overlayEl = document.getElementById("overlay");
+    const winTextEl = document.getElementById("win-text");
+
+    function show(screen) {
+      menuEl.classList.toggle("active", screen === "menu");
+      gameEl.classList.toggle("active", screen === "game");
+    }
+
+    function initBoard(n) {
+      const board = [];
+      for (let r = 0; r < n; r++) {
+        const row = [];
+        for (let c = 0; c < n; c++) row.push(r * n + c + 1);
+        board.push(row);
+      }
+      board[n - 1][n - 1] = 0;
+      state.board = board;
+      state.empty = [n - 1, n - 1];
+    }
+
+    function shuffle(steps) {
+      const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      let last = null;
+      for (let i = 0; i < steps; i++) {
+        const [er, ec] = state.empty;
+        const candidates = [];
+        for (const [dr, dc] of dirs) {
+          const nr = er + dr;
+          const nc = ec + dc;
+          if (nr < 0 || nc < 0 || nr >= state.size || nc >= state.size) continue;
+          if (last && nr === last[0] && nc === last[1]) continue;
+          candidates.push([nr, nc]);
+        }
+        if (!candidates.length) continue;
+        const [nr, nc] = candidates[Math.floor(Math.random() * candidates.length)];
+        state.board[er][ec] = state.board[nr][nc];
+        state.board[nr][nc] = 0;
+        last = state.empty;
+        state.empty = [nr, nc];
+      }
+    }
+
+    function cellSize(size) {
+      const maxByWidth = Math.floor((Math.min(window.innerWidth, 440) - 48) / size) - 6;
+      return Math.max(48, Math.min(CELL[size], maxByWidth)) + "px";
+    }
+
+    function startGame(size) {
+      state.size = size;
+      state.moves = 0;
+      state.won = false;
+      document.documentElement.style.setProperty("--n", size);
+      document.documentElement.style.setProperty("--cell", cellSize(size));
+      initBoard(size);
+      shuffle(size * size * 30);
+      render();
+      show("game");
+      overlayEl.classList.remove("show");
+    }
+
+    function neighborsOfEmpty() {
+      const [er, ec] = state.empty;
+      const out = [];
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = er + dr;
+        const nc = ec + dc;
+        if (nr >= 0 && nc >= 0 && nr < state.size && nc < state.size) out.push([nr, nc]);
+      }
+      return out;
+    }
+
+    function isSolved() {
+      const n = state.size;
+      let expect = 1;
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          if (r === n - 1 && c === n - 1) return state.board[r][c] === 0;
+          if (state.board[r][c] !== expect) return false;
+          expect++;
+        }
+      }
+      return true;
+    }
+
+    function moveTile(r, c) {
+      if (state.won) return;
+      const ok = neighborsOfEmpty().some(([nr, nc]) => nr === r && nc === c);
+      if (!ok) return;
+      const [er, ec] = state.empty;
+      state.board[er][ec] = state.board[r][c];
+      state.board[r][c] = 0;
+      state.empty = [r, c];
+      state.moves++;
+      render();
+      if (isSolved()) {
+        state.won = true;
+        setTimeout(showWin, 80);
+      }
+    }
+
+    function showWin() {
+      winTextEl.textContent =
+        `恭喜！你用了 ${state.moves} 步完成 ${state.size}×${state.size} 华容道。`;
+      overlayEl.classList.add("show");
+    }
+
+    function render() {
+      infoEl.textContent = `${state.size}×${state.size} 模式    步数：${state.moves}`;
+      boardEl.innerHTML = "";
+      for (let r = 0; r < state.size; r++) {
+        for (let c = 0; c < state.size; c++) {
+          const val = state.board[r][c];
+          const tile = document.createElement("button");
+          tile.type = "button";
+          tile.className = "tile" + (val === 0 ? " empty" : "");
+          tile.textContent = val === 0 ? "" : String(val);
+          tile.setAttribute("aria-label", val === 0 ? "空格" : `数字 ${val}`);
+          if (val !== 0) {
+            tile.addEventListener("click", () => moveTile(r, c));
+          }
+          boardEl.appendChild(tile);
+        }
+      }
+    }
+
+    document.querySelectorAll("[data-size]").forEach((btn) => {
+      btn.addEventListener("click", () => startGame(Number(btn.dataset.size)));
+    });
+
+    document.getElementById("btn-restart").addEventListener("click", () => {
+      startGame(state.size);
+    });
+
+    document.getElementById("btn-menu").addEventListener("click", () => {
+      overlayEl.classList.remove("show");
+      show("menu");
+    });
+
+    document.getElementById("win-again").addEventListener("click", () => {
+      startGame(state.size);
+    });
+
+    document.getElementById("win-menu").addEventListener("click", () => {
+      overlayEl.classList.remove("show");
+      show("menu");
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (!gameEl.classList.contains("active") || state.won) return;
+      const key = e.key.toLowerCase();
+      // 按键表示“把缺口往哪个方向推”
+      const mapping = {
+        arrowup: [1, 0], w: [1, 0],
+        arrowdown: [-1, 0], s: [-1, 0],
+        arrowleft: [0, 1], a: [0, 1],
+        arrowright: [0, -1], d: [0, -1],
+      };
+      if (!(key in mapping)) return;
+      e.preventDefault();
+      const [dr, dc] = mapping[key];
+      const [er, ec] = state.empty;
+      const tr = er + dr;
+      const tc = ec + dc;
+      if (tr >= 0 && tc >= 0 && tr < state.size && tc < state.size) {
+        moveTile(tr, tc);
+      }
+    });
+  </script>
+</body>
+</html>
