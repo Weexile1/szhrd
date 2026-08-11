@@ -4,8 +4,6 @@
 
 ## 在线游玩
 
-> 部署 GitHub Pages 后，把下面地址换成你的真实链接。
-
 **[点击开始游戏 →](https://weexile1.github.io/szhrd/)**
 
 打开链接即可玩，无需安装、无需下载代码。
